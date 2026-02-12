@@ -5,13 +5,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 
 interface ProgramSection {
   heading: string;
-  content: string;
+  contentHtml: string;
 }
 
 interface ProgramDetail {
   url: string;
   title: string;
-  description: string;
+  descriptionHtml: string;
   sections: ProgramSection[];
 }
 
@@ -130,12 +130,11 @@ function ProgramContent() {
             </a>
 
             {/* Description */}
-            {detail.description && (
-              <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-                <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {detail.description}
-                </p>
-              </div>
+            {detail.descriptionHtml && (
+              <div
+                className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
+                dangerouslySetInnerHTML={{ __html: detail.descriptionHtml }}
+              />
             )}
 
             {/* Sections */}
@@ -149,9 +148,10 @@ function ProgramContent() {
                     <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
                       {section.heading}
                     </h2>
-                    <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-                      {section.content}
-                    </p>
+                    <div
+                      className="prose prose-sm prose-zinc max-w-none dark:prose-invert"
+                      dangerouslySetInnerHTML={{ __html: section.contentHtml }}
+                    />
                   </div>
                 ))}
               </div>

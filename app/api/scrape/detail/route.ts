@@ -12,13 +12,13 @@ import { db } from "@/lib/firebase";
 
 interface ProgramSection {
   heading: string;
-  content: string;
+  contentHtml: string;
 }
 
 interface ProgramDetail {
   url: string;
   title: string;
-  description: string;
+  descriptionHtml: string;
   sections: ProgramSection[];
 }
 
@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
         (s: { heading: string }) =>
           /^(language selection|search|menu|main menu|site footer)/i.test(s.heading)
       );
-      if (!hasBoilerplate) {
+      // Also invalidate old cache entries that lack HTML fields
+      const hasHtmlFields = "descriptionHtml" in cached;
+      if (!hasBoilerplate && hasHtmlFields) {
         return NextResponse.json(cached);
       }
       // Delete stale cache entry
@@ -130,11 +132,9 @@ function parseProgramPage(
 
   // The first part (before any <h2>) contains the overview/description
   const introPart = h2Parts[0] || "";
-  const introParas = introPart.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
-  const description = introParas
-    .map((p) => p.replace(/<[^>]*>/g, "").trim())
-    .filter(Boolean)
-    .join("\n\n");
+  // Keep the HTML for the description (everything after the h1)
+  const afterH1 = introPart.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, "");
+  const descriptionHtml = fixHtml(afterH1);
 
   // Each subsequent part is a section
   const sections: ProgramSection[] = [];
@@ -164,43 +164,38 @@ function parseProgramPage(
 
     if (!heading || skipHeadings.has(heading.toLowerCase())) continue;
 
-    // Extract content after </h2>
-    const contentHtml = part.substring(headingEnd + 5);
+    // Extract content after </h2> and keep as HTML
+    const contentHtml = fixHtml(part.substring(headingEnd + 5));
 
-    // Convert HTML content to readable text
-    const content = htmlToText(contentHtml).trim();
-
-    if (content) {
-      sections.push({ heading, content });
+    // Only include if there's meaningful text content
+    const textContent = contentHtml.replace(/<[^>]*>/g, "").trim();
+    if (textContent) {
+      sections.push({ heading, contentHtml });
     }
   }
 
-  return { url, title, description, sections };
+  return { url, title, descriptionHtml, sections };
 }
 
-function htmlToText(html: string): string {
-  return html
-    // Convert <li> to bullet points
-    .replace(/<li[^>]*>/gi, "\n- ")
-    .replace(/<\/li>/gi, "")
-    // Convert <br> to newlines
-    .replace(/<br\s*\/?>/gi, "\n")
-    // Convert block elements to newlines
-    .replace(/<\/(p|div|tr|h[1-6])>/gi, "\n\n")
-    .replace(/<(p|div|tr|h[1-6])[^>]*>/gi, "")
-    // Convert <td> to tab separation
-    .replace(/<td[^>]*>/gi, "\t")
-    .replace(/<\/td>/gi, "")
-    // Strip remaining tags
-    .replace(/<[^>]*>/g, "")
-    // Decode common HTML entities
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    // Clean up whitespace
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+/** Fix relative URLs to absolute and make links open in new tabs */
+function fixHtml(html: string): string {
+  return (
+    html
+      // Convert relative hrefs to absolute Canada.ca URLs
+      .replace(
+        /href=["'](?!https?:\/\/|mailto:|tel:)\/([^"']*?)["']/gi,
+        'href="https://www.canada.ca/$1"'
+      )
+      // Make all links open in a new tab
+      .replace(
+        /<a\s+(?![^>]*target=)/gi,
+        '<a target="_blank" rel="noopener noreferrer" '
+      )
+      // Strip <script> and <style> tags for safety
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      // Remove inline event handlers (onclick, onerror, etc.)
+      .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, "")
+      .trim()
+  );
 }
