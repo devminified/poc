@@ -15,6 +15,170 @@ interface ProgramDetail {
   sections: ProgramSection[];
 }
 
+interface SubpageData {
+  html: string;
+  loading: boolean;
+  error: string | null;
+}
+
+/** Extract internal links from HTML content as structured items */
+function extractInternalLinks(
+  html: string,
+): { label: string; href: string }[] {
+  const links: { label: string; href: string }[] = [];
+  const regex =
+    /<a\s+[^>]*data-internal="true"[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = regex.exec(html)) !== null) {
+    const href = match[1];
+    const label = match[2].replace(/<[^>]*>/g, "").trim();
+    if (href && label) {
+      links.push({ label, href });
+    }
+  }
+  // Also try href before data-internal
+  const regex2 =
+    /<a\s+[^>]*href=["']([^"']+)["'][^>]*data-internal="true"[^>]*>([\s\S]*?)<\/a>/gi;
+  while ((match = regex2.exec(html)) !== null) {
+    const href = match[1];
+    const label = match[2].replace(/<[^>]*>/g, "").trim();
+    if (href && label && !links.some((l) => l.href === href)) {
+      links.push({ label, href });
+    }
+  }
+  return links;
+}
+
+/** Remove internal links from HTML, returning the remaining content */
+function stripInternalLinks(html: string): string {
+  // Remove <a> tags with data-internal but keep their text content
+  return html.replace(
+    /<a\s+[^>]*data-internal="true"[^>]*>([\s\S]*?)<\/a>/gi,
+    "$1",
+  );
+}
+
+/** Check if a section's content is primarily a list of internal links */
+function isSectionLinkList(section: ProgramSection): boolean {
+  const links = extractInternalLinks(section.contentHtml);
+  if (links.length === 0) return false;
+  // If the non-link text is minimal compared to links, treat as a link list
+  const stripped = section.contentHtml
+    .replace(/<a\s+[^>]*data-internal="true"[^>]*>[\s\S]*?<\/a>/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .trim();
+  // A section is a "link list" if it has 2+ internal links
+  return links.length >= 2 || stripped.length < 100;
+}
+
+function SectionAccordion({
+  link,
+}: {
+  link: { label: string; href: string };
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [subpage, setSubpage] = useState<SubpageData>({
+    html: "",
+    loading: false,
+    error: null,
+  });
+
+  async function handleToggle() {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+
+    setExpanded(true);
+
+    // Already fetched
+    if (subpage.html) return;
+
+    setSubpage({ html: "", loading: true, error: null });
+    try {
+      const res = await fetch("/api/scrape/detail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: link.href }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed: ${res.status}`);
+      }
+      // Combine description and sections into a single HTML block
+      let html = data.descriptionHtml || "";
+      if (data.sections?.length) {
+        html += data.sections
+          .map(
+            (s: ProgramSection) =>
+              `<h3>${s.heading}</h3>${s.contentHtml}`,
+          )
+          .join("");
+      }
+      setSubpage({ html, loading: false, error: null });
+    } catch (err) {
+      setSubpage({
+        html: "",
+        loading: false,
+        error: err instanceof Error ? err.message : "Failed to load",
+      });
+    }
+  }
+
+  return (
+    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300"
+      >
+        {link.label}
+        <svg
+          className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
+            expanded ? "rotate-180" : ""
+          }`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div className="pb-4">
+          {subpage.loading && (
+            <div className="flex items-center gap-2 py-3">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-400" />
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                Loading...
+              </span>
+            </div>
+          )}
+          {subpage.error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
+              <p className="text-sm text-red-700 dark:text-red-400">
+                {subpage.error}
+              </p>
+            </div>
+          )}
+          {subpage.html && (
+            <div
+              className="prose prose-sm prose-zinc max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: subpage.html }}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProgramContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -133,27 +297,56 @@ function ProgramContent() {
             {detail.descriptionHtml && (
               <div
                 className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
-                dangerouslySetInnerHTML={{ __html: detail.descriptionHtml }}
+                dangerouslySetInnerHTML={{
+                  __html: stripInternalLinks(detail.descriptionHtml),
+                }}
               />
             )}
 
             {/* Sections */}
             {detail.sections.length > 0 && (
               <div className="mt-4 space-y-4">
-                {detail.sections.map((section, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
-                  >
-                    <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                      {section.heading}
-                    </h2>
+                {detail.sections.map((section, i) => {
+                  const links = extractInternalLinks(section.contentHtml);
+                  const isLinkList = isSectionLinkList(section);
+
+                  if (isLinkList && links.length > 0) {
+                    // Render as expandable accordion items
+                    return (
+                      <div
+                        key={i}
+                        className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                          {section.heading}
+                        </h2>
+                        <div>
+                          {links.map((link) => (
+                            <SectionAccordion key={link.href} link={link} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Regular section — render HTML with internal links stripped
+                  return (
                     <div
-                      className="prose prose-sm prose-zinc max-w-none dark:prose-invert"
-                      dangerouslySetInnerHTML={{ __html: section.contentHtml }}
-                    />
-                  </div>
-                ))}
+                      key={i}
+                      className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+                    >
+                      <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                        {section.heading}
+                      </h2>
+                      <div
+                        className="prose prose-sm prose-zinc max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{
+                          __html: stripInternalLinks(section.contentHtml),
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

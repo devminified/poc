@@ -177,7 +177,7 @@ function parseProgramPage(
   return { url, title, descriptionHtml, sections };
 }
 
-/** Fix relative URLs to absolute and make links open in new tabs */
+/** Fix relative URLs to absolute and mark Canada.ca links for in-app navigation */
 function fixHtml(html: string): string {
   return (
     html
@@ -186,9 +186,14 @@ function fixHtml(html: string): string {
         /href=["'](?!https?:\/\/|mailto:|tel:)\/([^"']*?)["']/gi,
         'href="https://www.canada.ca/$1"'
       )
-      // Make all links open in a new tab
+      // Mark Canada.ca links with a data attribute for in-app routing
       .replace(
-        /<a\s+(?![^>]*target=)/gi,
+        /<a\s+([^>]*?)href=["'](https?:\/\/[^"']*canada\.ca[^"']*)["']/gi,
+        '<a $1href="$2" data-internal="true"'
+      )
+      // Non-Canada.ca links open in new tab
+      .replace(
+        /<a\s+(?![^>]*data-internal)(?![^>]*target=)/gi,
         '<a target="_blank" rel="noopener noreferrer" '
       )
       // Strip <script> and <style> tags for safety
