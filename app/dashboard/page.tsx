@@ -12,7 +12,6 @@ import {
 import { db } from "@/lib/firebase";
 
 interface SearchParams {
-  value: string;
   type: string;
   keyword: string;
 }
@@ -142,9 +141,7 @@ export default function Dashboard() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          {search.searchParams.value ||
-                            search.searchParams.keyword ||
-                            "All programs"}
+                          {search.searchParams.keyword || "All programs"}
                         </span>
                         <span className="inline-block rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
                           {search.searchParams.type}

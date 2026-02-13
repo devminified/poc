@@ -12,11 +12,11 @@ interface ScrapedItem {
 
 export async function POST(request: NextRequest) {
   try {
-    const { value, type, keyword } = await request.json();
+    const { type, keyword } = await request.json();
 
-    if (!value && !keyword) {
+    if (!keyword) {
       return NextResponse.json(
-        { error: "At least one of value or keyword is required" },
+        { error: "Search term is required" },
         { status: 400 }
       );
     }
@@ -64,12 +64,12 @@ export async function POST(request: NextRequest) {
     const allPrograms = parseScrapedData(scrapingData);
 
     // Filter results based on search params
-    const searchTerm = value || keyword || "";
+    const searchTerm = keyword;
     const results = filterResults(allPrograms, searchTerm, type);
 
     // Save to Firestore
     const docRef = await addDoc(collection(db, "searches"), {
-      searchParams: { value, type, keyword },
+      searchParams: { type, keyword },
       results,
       totalScraped: allPrograms.length,
       createdAt: serverTimestamp(),
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       id: docRef.id,
-      searchParams: { value, type, keyword },
+      searchParams: { type, keyword },
       results,
       totalScraped: allPrograms.length,
     });

@@ -6,7 +6,6 @@ import Link from "next/link";
 const SEARCH_TYPES = ["Exact Match", "Contains", "Starts With", "Ends With"];
 
 interface SearchParams {
-  value: string;
   type: string;
   keyword: string;
 }
@@ -28,7 +27,6 @@ interface SearchResponse {
 
 export default function Home() {
   const [params, setParams] = useState<SearchParams>({
-    value: "",
     type: SEARCH_TYPES[0],
     keyword: "",
   });
@@ -64,7 +62,7 @@ export default function Home() {
   }
 
   function handleReset() {
-    setParams({ value: "", type: SEARCH_TYPES[0], keyword: "" });
+    setParams({ type: SEARCH_TYPES[0], keyword: "" });
     setResponse(null);
     setError(null);
   }
@@ -82,22 +80,23 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {/* Value */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Search */}
             <div>
               <label
-                htmlFor="value"
+                htmlFor="keyword"
                 className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Value
+                Search
               </label>
               <input
-                id="value"
+                id="keyword"
                 type="text"
-                placeholder="Enter search value"
-                value={params.value}
+                required
+                placeholder="Enter search term"
+                value={params.keyword}
                 onChange={(e) =>
-                  setParams((p) => ({ ...p, value: e.target.value }))
+                  setParams((p) => ({ ...p, keyword: e.target.value }))
                 }
                 disabled={loading}
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
@@ -127,27 +126,6 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            {/* Keyword */}
-            <div>
-              <label
-                htmlFor="keyword"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-              >
-                Keyword
-              </label>
-              <input
-                id="keyword"
-                type="text"
-                placeholder="Enter keyword"
-                value={params.keyword}
-                onChange={(e) =>
-                  setParams((p) => ({ ...p, keyword: e.target.value }))
-                }
-                disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
-              />
             </div>
           </div>
 
