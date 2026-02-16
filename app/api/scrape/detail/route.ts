@@ -41,12 +41,13 @@ export async function POST(request: NextRequest) {
 
     if (!snapshot.empty) {
       const cached = snapshot.docs[0].data();
-      const hasBoilerplate = (cached.sections || []).some(
+      const hasBrokenHeadings = (cached.sections || []).some(
         (s: { heading: string }) =>
-          /^(language selection|search|menu|main menu|site footer)/i.test(s.heading)
+          /^(language selection|search|menu|main menu|site footer)/i.test(s.heading) ||
+          /class=/.test(s.heading)
       );
       const hasHtmlFields = "descriptionHtml" in cached;
-      if (!hasBoilerplate && hasHtmlFields) {
+      if (!hasBrokenHeadings && hasHtmlFields) {
         return NextResponse.json(cached);
       }
       await deleteDoc(snapshot.docs[0].ref);
@@ -135,22 +136,27 @@ function parseProgramPage(
     "site footer",
     "about this site",
     "government of canada footer",
+    "page details",
   ]);
 
   for (let i = 1; i < h2Parts.length; i++) {
     const part = h2Parts[i];
 
-    const headingEnd = part.indexOf("</h2>");
+    const tagClose = part.indexOf(">");
+    if (tagClose === -1) continue;
+
+    const afterTag = part.substring(tagClose + 1);
+    const headingEnd = afterTag.indexOf("</h2>");
     if (headingEnd === -1) continue;
 
-    const heading = part
+    const heading = afterTag
       .substring(0, headingEnd)
       .replace(/<[^>]*>/g, "")
       .trim();
 
     if (!heading || skipHeadings.has(heading.toLowerCase())) continue;
 
-    const contentHtml = fixHtml(part.substring(headingEnd + 5));
+    const contentHtml = fixHtml(afterTag.substring(headingEnd + 5));
 
     const textContent = contentHtml.replace(/<[^>]*>/g, "").trim();
     if (textContent) {
@@ -164,6 +170,11 @@ function parseProgramPage(
 function fixHtml(html: string): string {
   return (
     html
+      .replace(
+        /\s+(?:class|id|role|style|aria-[\w-]+|data-(?!internal)[\w-]+)\s*=\s*["'][^"']*["']/gi,
+        ""
+      )
+      .replace(/(?:^|(?<=>))\s*[\w-]+\s*=\s*["'][^"']*["']\s*>/g, "")
       .replace(
         /href=["'](?!https?:\/\/|mailto:|tel:)\/([^"']*?)["']/gi,
         'href="https://www.canada.ca/$1"'
