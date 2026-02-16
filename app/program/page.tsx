@@ -1,27 +1,14 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useProgramDetail, useSubpage } from "@/hooks";
 
 interface ProgramSection {
   heading: string;
   contentHtml: string;
 }
 
-interface ProgramDetail {
-  url: string;
-  title: string;
-  descriptionHtml: string;
-  sections: ProgramSection[];
-}
-
-interface SubpageData {
-  html: string;
-  loading: boolean;
-  error: string | null;
-}
-
-/** Extract internal links from HTML content as structured items */
 function extractInternalLinks(
   html: string,
 ): { label: string; href: string }[] {
@@ -36,7 +23,6 @@ function extractInternalLinks(
       links.push({ label, href });
     }
   }
-  // Also try href before data-internal
   const regex2 =
     /<a\s+[^>]*href=["']([^"']+)["'][^>]*data-internal="true"[^>]*>([\s\S]*?)<\/a>/gi;
   while ((match = regex2.exec(html)) !== null) {
@@ -49,25 +35,20 @@ function extractInternalLinks(
   return links;
 }
 
-/** Remove internal links from HTML, returning the remaining content */
 function stripInternalLinks(html: string): string {
-  // Remove <a> tags with data-internal but keep their text content
   return html.replace(
     /<a\s+[^>]*data-internal="true"[^>]*>([\s\S]*?)<\/a>/gi,
     "$1",
   );
 }
 
-/** Check if a section's content is primarily a list of internal links */
 function isSectionLinkList(section: ProgramSection): boolean {
   const links = extractInternalLinks(section.contentHtml);
   if (links.length === 0) return false;
-  // If the non-link text is minimal compared to links, treat as a link list
   const stripped = section.contentHtml
     .replace(/<a\s+[^>]*data-internal="true"[^>]*>[\s\S]*?<\/a>/gi, "")
     .replace(/<[^>]*>/g, "")
     .trim();
-  // A section is a "link list" if it has 2+ internal links
   return links.length >= 2 || stripped.length < 100;
 }
 
@@ -77,11 +58,7 @@ function SectionAccordion({
   link: { label: string; href: string };
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [subpage, setSubpage] = useState<SubpageData>({
-    html: "",
-    loading: false,
-    error: null,
-  });
+  const { subpage, fetchSubpage } = useSubpage(link.href);
 
   async function handleToggle() {
     if (expanded) {
@@ -90,38 +67,8 @@ function SectionAccordion({
     }
 
     setExpanded(true);
-
-    // Already fetched
-    if (subpage.html) return;
-
-    setSubpage({ html: "", loading: true, error: null });
-    try {
-      const res = await fetch("/api/scrape/detail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: link.href }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || `Request failed: ${res.status}`);
-      }
-      // Combine description and sections into a single HTML block
-      let html = data.descriptionHtml || "";
-      if (data.sections?.length) {
-        html += data.sections
-          .map(
-            (s: ProgramSection) =>
-              `<h3>${s.heading}</h3>${s.contentHtml}`,
-          )
-          .join("");
-      }
-      setSubpage({ html, loading: false, error: null });
-    } catch (err) {
-      setSubpage({
-        html: "",
-        loading: false,
-        error: err instanceof Error ? err.message : "Failed to load",
-      });
+    if (!subpage.html) {
+      await fetchSubpage();
     }
   }
 
@@ -183,47 +130,11 @@ function ProgramContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const url = searchParams.get("url");
-
-  const [detail, setDetail] = useState<ProgramDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!url) {
-      setError("No program URL provided");
-      setLoading(false);
-      return;
-    }
-
-    async function fetchDetail() {
-      try {
-        const res = await fetch("/api/scrape/detail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || `Request failed: ${res.status}`);
-        }
-
-        setDetail(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDetail();
-  }, [url]);
+  const { detail, loading, error } = useProgramDetail(url);
 
   return (
     <div className="flex items-start justify-center px-4 pt-12 pb-12 font-sans">
       <div className="w-full max-w-2xl">
-        {/* Back button */}
         <button
           type="button"
           onClick={() => router.back()}
@@ -245,7 +156,6 @@ function ProgramContent() {
           Back
         </button>
 
-        {/* Loading State */}
         {loading && (
           <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-400" />
@@ -255,22 +165,18 @@ function ProgramContent() {
           </div>
         )}
 
-        {/* Error State */}
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Detail Content */}
         {detail && (
           <div>
-            {/* Title */}
             <h1 className="mb-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {detail.title}
             </h1>
 
-            {/* External link */}
             <a
               href={detail.url}
               target="_blank"
@@ -293,7 +199,6 @@ function ProgramContent() {
               </svg>
             </a>
 
-            {/* Description */}
             {detail.descriptionHtml && (
               <div
                 className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
@@ -303,7 +208,6 @@ function ProgramContent() {
               />
             )}
 
-            {/* Sections */}
             {detail.sections.length > 0 && (
               <div className="mt-4 space-y-4">
                 {detail.sections.map((section, i) => {
@@ -311,7 +215,6 @@ function ProgramContent() {
                   const isLinkList = isSectionLinkList(section);
 
                   if (isLinkList && links.length > 0) {
-                    // Render as expandable accordion items
                     return (
                       <div
                         key={i}
@@ -329,7 +232,6 @@ function ProgramContent() {
                     );
                   }
 
-                  // Regular section — render HTML with internal links stripped
                   return (
                     <div
                       key={i}

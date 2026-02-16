@@ -1,33 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import {
-  collection,
-  query,
-  orderBy,
-  onSnapshot,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-interface SearchParams {
-  type: string;
-  keyword: string;
-}
-
-interface ScrapedItem {
-  title: string;
-  url: string;
-  description: string;
-  status: string;
-  theme: string;
-}
+import { Timestamp } from "firebase/firestore";
+import { useSavedSearches } from "@/hooks";
 
 interface SavedSearch {
   id: string;
-  searchParams: SearchParams;
-  results: ScrapedItem[];
+  searchParams: { type: string; keyword: string };
+  results: Array<{
+    title: string;
+    url: string;
+    description: string;
+    status: string;
+    theme: string;
+  }>;
   totalScraped: number;
   createdAt: Timestamp | null;
 }
@@ -51,37 +38,8 @@ function formatRelativeTime(timestamp: Timestamp | null): string {
 }
 
 export default function Dashboard() {
-  const [searches, setSearches] = useState<SavedSearch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { searches, loading, error } = useSavedSearches();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const q = query(
-      collection(db, "searches"),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as SavedSearch[];
-        setSearches(data);
-        setLoading(false);
-        setError(null);
-      },
-      (err) => {
-        console.error("Firestore listener error:", err);
-        setError("Failed to load saved searches");
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, []);
 
   return (
     <div className="flex items-start justify-center px-4 pt-12 pb-12 font-sans">
@@ -95,7 +53,6 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Loading State */}
         {loading && (
           <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -104,14 +61,12 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Error State */}
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Empty State */}
         {!loading && !error && searches.length === 0 && (
           <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -120,7 +75,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Search Cards */}
         {!loading && !error && searches.length > 0 && (
           <div className="space-y-3">
             {searches.map((search) => {
@@ -130,7 +84,6 @@ export default function Dashboard() {
                   key={search.id}
                   className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
                 >
-                  {/* Card Header */}
                   <button
                     type="button"
                     onClick={() =>
@@ -172,7 +125,6 @@ export default function Dashboard() {
                     </svg>
                   </button>
 
-                  {/* Expanded Results */}
                   {isExpanded && (
                     <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
                       {search.results.length === 0 ? (

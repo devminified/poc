@@ -1,71 +1,20 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
 import Link from "next/link";
+import { useSearch } from "@/hooks";
 
 const SEARCH_TYPES = ["Exact Match", "Contains", "Starts With", "Ends With"];
 
-interface SearchParams {
-  type: string;
-  keyword: string;
-}
-
-interface ScrapedItem {
-  title: string;
-  url: string;
-  description: string;
-  status: string;
-  theme: string;
-}
-
-interface SearchResponse {
-  id: string;
-  searchParams: SearchParams;
-  results: ScrapedItem[];
-  totalScraped: number;
-}
-
 export default function Home() {
-  const [params, setParams] = useState<SearchParams>({
-    type: SEARCH_TYPES[0],
-    keyword: "",
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [response, setResponse] = useState<SearchResponse | null>(null);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResponse(null);
-
-    try {
-      const res = await fetch("/api/scrape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || `Request failed: ${res.status}`);
-      }
-
-      setResponse(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleReset() {
-    setParams({ type: SEARCH_TYPES[0], keyword: "" });
-    setResponse(null);
-    setError(null);
-  }
+  const {
+    params,
+    setParams,
+    loading,
+    error,
+    response,
+    handleSubmit,
+    handleReset,
+  } = useSearch(SEARCH_TYPES[0]);
 
   return (
     <div className="px-4 pt-12 pb-12 font-sans sm:px-6 lg:px-8">
@@ -81,7 +30,6 @@ export default function Home() {
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Search */}
             <div>
               <label
                 htmlFor="keyword"
@@ -103,7 +51,6 @@ export default function Home() {
               />
             </div>
 
-            {/* Type */}
             <div>
               <label
                 htmlFor="type"
@@ -129,7 +76,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="mt-4 flex gap-3">
             <button
               type="submit"
@@ -140,7 +86,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              onClick={handleReset}
+              onClick={() => handleReset(SEARCH_TYPES[0])}
               disabled={loading}
               className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
@@ -149,14 +95,12 @@ export default function Home() {
           </div>
         </form>
 
-        {/* Error State */}
         {error && (
           <div className="mt-8 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950">
             <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* Results */}
         {response && (
           <div className="mt-8">
             <div className="mb-4 flex items-center justify-between">
@@ -164,9 +108,6 @@ export default function Home() {
                 Results ({response.results.length} of {response.totalScraped}{" "}
                 programs)
               </h2>
-              {/* <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                ID: {response.id}
-              </span> */}
             </div>
 
             {response.results.length === 0 ? (

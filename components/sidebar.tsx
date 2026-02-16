@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/hooks";
 
 const NAV_ITEMS = [
   {
@@ -61,7 +61,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Hamburger button — mobile only */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -83,7 +82,6 @@ export default function Sidebar() {
         </svg>
       </button>
 
-      {/* Backdrop — mobile only */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -91,7 +89,6 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-zinc-200 bg-white transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${
           open ? "translate-x-0" : "-translate-x-full"
@@ -124,7 +121,6 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* Theme toggle */}
         <div className="border-t border-zinc-200 px-3 py-4 dark:border-zinc-800">
           {mounted && (
             <button

@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call ScrapingBee API
     const scrapingBeeUrl = new URL("https://app.scrapingbee.com/api/v1/");
     scrapingBeeUrl.searchParams.set("api_key", apiKey);
     scrapingBeeUrl.searchParams.set("url", targetUrl);
@@ -60,14 +59,11 @@ export async function POST(request: NextRequest) {
 
     const scrapingData = await response.json();
 
-    // Extract funding programs from the scraped HTML
     const allPrograms = parseScrapedData(scrapingData);
 
-    // Filter results based on search params
     const searchTerm = keyword;
     const results = filterResults(allPrograms, searchTerm, type);
 
-    // Save to Firestore
     const docRef = await addDoc(collection(db, "searches"), {
       searchParams: { type, keyword },
       results,
@@ -94,19 +90,11 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
   const body = (data.body as string) || "";
   const items: ScrapedItem[] = [];
 
-  // Canada.ca funding page lists programs in sections with headings and links.
-  // Each program block typically has:
-  //   <h4>...<a href="URL">Title</a>...</h4>
-  //   <p>Description text</p>
-  //   <ul><li>Status: ...</li><li>Theme: ...</li></ul>
-
-  // Split by h4 tags to isolate each program block
   const blocks = body.split(/<h4[\s>]/i);
 
   for (let i = 1; i < blocks.length; i++) {
     const block = blocks[i];
 
-    // Extract the link from the heading
     const linkMatch = block.match(
       /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
     );
@@ -116,18 +104,15 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
     const title = linkMatch[2].replace(/<[^>]*>/g, "").trim();
     if (!title) continue;
 
-    // Make relative URLs absolute
     if (url.startsWith("/")) {
       url = `https://www.canada.ca${url}`;
     }
 
-    // Extract description from first <p> after the heading
     const descMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
     const description = descMatch
       ? descMatch[1].replace(/<[^>]*>/g, "").trim()
       : "";
 
-    // Extract status and theme from list items
     let status = "";
     let theme = "";
     const listItems = block.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) || [];
