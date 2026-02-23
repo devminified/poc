@@ -52,6 +52,38 @@ function isSectionLinkList(section: ProgramSection): boolean {
   return links.length >= 2 || stripped.length < 100;
 }
 
+function isPdfLink(link: { label: string; href: string }): boolean {
+  return /\.pdf(\?|#|$)/i.test(link.href) || /\[PDF/i.test(link.label);
+}
+
+function PdfLink({ link }: { link: { label: string; href: string } }) {
+  return (
+    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300"
+      >
+        <span>{link.label}</span>
+        <svg
+          className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 function SectionAccordion({
   link,
 }: {
@@ -116,7 +148,7 @@ function SectionAccordion({
           )}
           {subpage.html && (
             <div
-              className="prose prose-sm prose-zinc max-w-none dark:prose-invert"
+              className="prose prose-sm prose-zinc max-w-none break-words dark:prose-invert"
               dangerouslySetInnerHTML={{ __html: subpage.html }}
             />
           )}
@@ -218,9 +250,13 @@ function ProgramContent() {
                         />
                       )}
                       <div>
-                        {descLinks.map((link) => (
-                          <SectionAccordion key={link.href} link={link} />
-                        ))}
+                        {descLinks.map((link) =>
+                          isPdfLink(link) ? (
+                            <PdfLink key={link.href} link={link} />
+                          ) : (
+                            <SectionAccordion key={link.href} link={link} />
+                          )
+                        )}
                       </div>
                     </div>
                   );
@@ -252,9 +288,13 @@ function ProgramContent() {
                           {section.heading}
                         </h2>
                         <div>
-                          {links.map((link) => (
-                            <SectionAccordion key={link.href} link={link} />
-                          ))}
+                          {links.map((link) =>
+                            isPdfLink(link) ? (
+                              <PdfLink key={link.href} link={link} />
+                            ) : (
+                              <SectionAccordion key={link.href} link={link} />
+                            )
+                          )}
                         </div>
                       </div>
                     );
