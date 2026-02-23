@@ -199,7 +199,8 @@ function ProgramContent() {
               </svg>
             </a>
 
-            {detail.descriptionHtml && (
+            {detail.descriptionHtml &&
+              detail.descriptionHtml.replace(/<[^>]*>/g, "").trim() && (
               <div
                 className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
                 dangerouslySetInnerHTML={{

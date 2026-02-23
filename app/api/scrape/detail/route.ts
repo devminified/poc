@@ -124,7 +124,10 @@ function parseProgramPage(
 
   const introPart = h2Parts[0] || "";
   const afterH1 = introPart.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, "");
-  const descriptionHtml = fixHtml(afterH1);
+  const descriptionFixed = fixHtml(afterH1);
+  const descriptionHtml = descriptionFixed.replace(/<[^>]*>/g, "").trim()
+    ? descriptionFixed
+    : "";
 
   const sections: ProgramSection[] = [];
 
