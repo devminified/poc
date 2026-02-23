@@ -20,7 +20,10 @@ interface ProgramDetail {
   title: string;
   descriptionHtml: string;
   sections: ProgramSection[];
+  parserVersion: number;
 }
+
+const PARSER_VERSION = 3;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,13 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (!snapshot.empty) {
       const cached = snapshot.docs[0].data();
-      const hasBrokenHeadings = (cached.sections || []).some(
-        (s: { heading: string }) =>
-          /^(language selection|search|menu|main menu|site footer)/i.test(s.heading) ||
-          /class=/.test(s.heading)
-      );
-      const hasHtmlFields = "descriptionHtml" in cached;
-      if (!hasBrokenHeadings && hasHtmlFields) {
+      if (cached.parserVersion === PARSER_VERSION) {
         return NextResponse.json(cached);
       }
       await deleteDoc(snapshot.docs[0].ref);
@@ -120,14 +117,11 @@ function parseProgramPage(
     ? h1Match[1].replace(/<[^>]*>/g, "").trim()
     : "Untitled Program";
 
-  const h2Parts = mainContent.split(/<h2[\s>]/i);
+  const h2Parts = mainContent.split(/<h2\b/i);
 
   const introPart = h2Parts[0] || "";
   const afterH1 = introPart.replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, "");
-  const descriptionFixed = fixHtml(afterH1);
-  const descriptionHtml = descriptionFixed.replace(/<[^>]*>/g, "").trim()
-    ? descriptionFixed
-    : "";
+  const descriptionHtml = fixHtml(afterH1);
 
   const sections: ProgramSection[] = [];
 
@@ -136,6 +130,7 @@ function parseProgramPage(
     "search",
     "menu",
     "main menu",
+    "on this page",
     "site footer",
     "about this site",
     "government of canada footer",
@@ -167,7 +162,7 @@ function parseProgramPage(
     }
   }
 
-  return { url, title, descriptionHtml, sections };
+  return { url, title, descriptionHtml, sections, parserVersion: PARSER_VERSION };
 }
 
 function fixHtml(html: string): string {

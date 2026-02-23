@@ -200,14 +200,41 @@ function ProgramContent() {
             </a>
 
             {detail.descriptionHtml &&
-              detail.descriptionHtml.replace(/<[^>]*>/g, "").trim() && (
-              <div
-                className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
-                dangerouslySetInnerHTML={{
-                  __html: stripInternalLinks(detail.descriptionHtml),
-                }}
-              />
-            )}
+              detail.descriptionHtml.replace(/<[^>]*>/g, "").trim() && (() => {
+                const descLinks = extractInternalLinks(detail.descriptionHtml);
+                const strippedText = detail.descriptionHtml
+                  .replace(/<a\s+[^>]*data-internal="true"[^>]*>[\s\S]*?<\/a>/gi, "")
+                  .replace(/<[^>]*>/g, "")
+                  .trim();
+                const isDescLinkList = descLinks.length >= 2 || (descLinks.length > 0 && strippedText.length < 100);
+
+                if (isDescLinkList && descLinks.length > 0) {
+                  return (
+                    <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                      {strippedText && (
+                        <div
+                          className="prose prose-sm prose-zinc mb-3 max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: stripInternalLinks(detail.descriptionHtml) }}
+                        />
+                      )}
+                      <div>
+                        {descLinks.map((link) => (
+                          <SectionAccordion key={link.href} link={link} />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
+                    dangerouslySetInnerHTML={{
+                      __html: stripInternalLinks(detail.descriptionHtml),
+                    }}
+                  />
+                );
+              })()}
 
             {detail.sections.length > 0 && (
               <div className="mt-4 space-y-4">
