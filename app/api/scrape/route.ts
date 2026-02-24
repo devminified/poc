@@ -61,28 +61,12 @@ export async function POST(request: NextRequest) {
     const searchTerm = keyword;
     const results = filterResults(allPrograms, searchTerm, theme, value);
 
-    // Get all existing saved URLs to avoid duplicates
-    const existingSnapshot = await getDocs(collection(db, "searches"));
-    const existingUrls = new Set<string>();
-    existingSnapshot.docs.forEach((doc) => {
-      const data = doc.data();
-      if (data.results) {
-        for (const item of data.results) {
-          existingUrls.add(item.url);
-        }
-      }
+    await addDoc(collection(db, "searches"), {
+      searchParams: { keyword, theme, value },
+      results,
+      totalScraped: allPrograms.length,
+      createdAt: serverTimestamp(),
     });
-
-    const newResults = results.filter((item) => !existingUrls.has(item.url));
-
-    if (newResults.length > 0) {
-      await addDoc(collection(db, "searches"), {
-        searchParams: { keyword, theme, value },
-        results: newResults,
-        totalScraped: allPrograms.length,
-        createdAt: serverTimestamp(),
-      });
-    }
 
     return NextResponse.json({
       searchParams: { keyword, theme, value },
