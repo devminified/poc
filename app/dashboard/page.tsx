@@ -33,41 +33,45 @@ function formatSearchLabel(params: { keyword: string; theme: string; value: stri
   return parts.length > 0 ? parts.join(" | ") : "All Programs";
 }
 
+interface FlatJob {
+  searchLabel: string;
+  title: string;
+  url: string;
+  description: string;
+  status: string;
+  value: string;
+  date: string;
+}
+
 export default function Dashboard() {
   const { searches, loading, error } = useSavedSearches();
-  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // Group results by search, deduplicate jobs across all groups by URL
-  const groupedSearches = (() => {
+  // Flatten all jobs with their search label, deduplicate by URL
+  const allJobs: FlatJob[] = (() => {
     const seen = new Set<string>();
-    return searches.map((search) => {
-      const uniqueResults = search.results.filter((item) => {
-        if (seen.has(item.url)) return false;
-        seen.add(item.url);
-        return true;
-      }).map((item) => {
-        const date = extractDate(item.status, item.date);
-        return {
-          ...item,
-          value: cleanValue(item.value),
-          status: cleanStatus(item.status),
-          date,
-        };
-      });
-      return { ...search, results: uniqueResults };
-    }).filter((search) => search.results.length > 0);
+    const jobs: FlatJob[] = [];
+    for (const search of searches) {
+      const label = formatSearchLabel(search.searchParams);
+      for (const item of search.results) {
+        if (!seen.has(item.url)) {
+          seen.add(item.url);
+          const date = extractDate(item.status, item.date);
+          jobs.push({
+            searchLabel: label,
+            ...item,
+            value: cleanValue(item.value),
+            status: cleanStatus(item.status),
+            date,
+          });
+        }
+      }
+    }
+    return jobs;
   })();
 
-  function getVisibleCount(searchId: string): number {
-    return visibleCounts[searchId] || PAGE_SIZE;
-  }
-
-  function loadMore(searchId: string) {
-    setVisibleCounts((prev) => ({
-      ...prev,
-      [searchId]: (prev[searchId] || PAGE_SIZE) + PAGE_SIZE,
-    }));
-  }
+  const visibleJobs = allJobs.slice(0, visibleCount);
+  const hasMore = allJobs.length > visibleCount;
 
   return (
     <div className="px-4 pt-12 pb-12 font-sans sm:px-6 lg:px-8">
@@ -95,7 +99,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && !error && groupedSearches.length === 0 && (
+        {!loading && !error && allJobs.length === 0 && (
           <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               No saved searches yet. Run a search to get started.
@@ -103,100 +107,96 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && !error && groupedSearches.length > 0 && (
-          <div className="space-y-8">
-            {groupedSearches.map((search) => {
-              const visible = getVisibleCount(search.id);
-              const visibleResults = search.results.slice(0, visible);
-              const hasMore = search.results.length > visible;
+        {!loading && !error && allJobs.length > 0 && (
+          <div>
+            <ul className="space-y-3">
+              {visibleJobs.map((item, i) => {
+                const prevLabel = i > 0 ? visibleJobs[i - 1].searchLabel : null;
+                const showLabel = item.searchLabel !== prevLabel;
 
-              return (
-                <div key={search.id}>
-                  <p className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    {formatSearchLabel(search.searchParams)}
-                  </p>
-                  <ul className="space-y-3">
-                    {visibleResults.map((item, i) => (
-                      <li
-                        key={i}
-                        className="rounded-lg border border-zinc-200 bg-zinc-100 p-4 dark:border-zinc-800 dark:bg-zinc-900"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex min-w-0 items-center gap-2">
-                              <Link
-                                href={`/program?url=${encodeURIComponent(item.url)}`}
-                                className="truncate text-sm font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500 dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-400"
+                return (
+                  <li key={i}>
+                    {showLabel && (
+                      <p className={`${i > 0 ? "mt-6" : ""} mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300`}>
+                        {item.searchLabel}
+                      </p>
+                    )}
+                    <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Link
+                              href={`/program?url=${encodeURIComponent(item.url)}`}
+                              className="truncate text-sm font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500 dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-400"
+                            >
+                              {item.title}
+                            </Link>
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                              title="Open on Canada.ca"
+                            >
+                              <svg
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
                               >
-                                {item.title}
-                              </Link>
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="shrink-0 text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
-                                title="Open on Canada.ca"
-                              >
-                                <svg
-                                  className="h-3.5 w-3.5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                  strokeWidth={2}
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14"
-                                  />
-                                </svg>
-                              </a>
-                            </div>
-                            {item.description && (
-                              <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
-                                {item.description}
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14"
+                                />
+                              </svg>
+                            </a>
+                          </div>
+                          {item.description && (
+                            <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                              {item.description}
+                            </p>
+                          )}
+                          {item.value && (
+                            <p className="mt-2 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                              <span className="font-medium text-zinc-700 dark:text-zinc-300">Amount:</span>{" "}
+                              {item.value}
+                            </p>
+                          )}
+                        </div>
+                        {(item.date || item.status) && (
+                          <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
+                            {item.date ? (
+                              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                                <span className="font-medium text-zinc-700 dark:text-zinc-300">Due Date:</span>{" "}
+                                {item.date}
                               </p>
-                            )}
-                            {item.value && (
-                              <p className="mt-2 truncate text-xs text-zinc-500 dark:text-zinc-400">
-                                <span className="font-medium text-zinc-700 dark:text-zinc-300">Amount:</span>{" "}
-                                {item.value}
+                            ) : <span />}
+                            {item.status && (
+                              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                                <span className="font-medium text-zinc-700 dark:text-zinc-300">Status:</span>{" "}
+                                {item.status}
                               </p>
                             )}
                           </div>
-                          {(item.date || item.status) && (
-                            <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
-                              {item.date ? (
-                                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                                  <span className="font-medium text-zinc-700 dark:text-zinc-300">Due Date:</span>{" "}
-                                  {item.date}
-                                </p>
-                              ) : <span />}
-                              {item.status && (
-                                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                                  <span className="font-medium text-zinc-700 dark:text-zinc-300">Status:</span>{" "}
-                                  {item.status}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  {hasMore && (
-                    <div className="mt-4 text-center">
-                      <button
-                        onClick={() => loadMore(search.id)}
-                        className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                      >
-                        Load More
-                      </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </li>
+                );
+              })}
+            </ul>
+            {hasMore && (
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => setVisibleCount((prev) => prev + PAGE_SIZE)}
+                  className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  Load More
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
