@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface ScrapedItem {
@@ -61,15 +61,30 @@ export async function POST(request: NextRequest) {
     const searchTerm = keyword;
     const results = filterResults(allPrograms, searchTerm, theme, value);
 
-    const docRef = await addDoc(collection(db, "searches"), {
-      searchParams: { keyword, theme, value },
-      results,
-      totalScraped: allPrograms.length,
-      createdAt: serverTimestamp(),
+    // Get all existing saved URLs to avoid duplicates
+    const existingSnapshot = await getDocs(collection(db, "searches"));
+    const existingUrls = new Set<string>();
+    existingSnapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      if (data.results) {
+        for (const item of data.results) {
+          existingUrls.add(item.url);
+        }
+      }
     });
 
+    const newResults = results.filter((item) => !existingUrls.has(item.url));
+
+    if (newResults.length > 0) {
+      await addDoc(collection(db, "searches"), {
+        searchParams: { keyword, theme, value },
+        results: newResults,
+        totalScraped: allPrograms.length,
+        createdAt: serverTimestamp(),
+      });
+    }
+
     return NextResponse.json({
-      id: docRef.id,
       searchParams: { keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
@@ -80,6 +95,18 @@ export async function POST(request: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+export async function DELETE() {
+  try {
+    const snapshot = await getDocs(collection(db, "searches"));
+    const deletes = snapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(deletes);
+    return NextResponse.json({ deleted: snapshot.size });
+  } catch (error) {
+    console.error("Delete error:", error);
+    return NextResponse.json({ error: "Failed to clear searches" }, { status: 500 });
   }
 }
 
@@ -183,7 +210,7 @@ function filterResults(
     if (!searchTerm) return true;
 
     const term = searchTerm.toLowerCase();
-    const haystack = `${item.title} ${item.description} ${item.theme}`.toLowerCase();
+    const haystack = `${item.title} ${item.description} ${item.theme} ${item.status} ${item.value} ${item.date}`.toLowerCase();
     return haystack.includes(term);
   });
 }
