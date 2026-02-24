@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useCallback, type FormEvent } from "react";
 
 interface SearchParams {
-  type: string;
   keyword: string;
   theme: string;
   value: string;
@@ -26,9 +25,8 @@ interface SearchResponse {
   totalScraped: number;
 }
 
-export function useSearch(initialType: string = "") {
+export function useSearch() {
   const [params, setParams] = useState<SearchParams>({
-    type: initialType,
     keyword: "",
     theme: "",
     value: "",
@@ -68,8 +66,8 @@ export function useSearch(initialType: string = "") {
     fetchJobs();
   }
 
-  function handleReset(resetType: string = initialType) {
-    setParams({ type: resetType, keyword: "", theme: "", value: "" });
+  function handleReset() {
+    setParams({ keyword: "", theme: "", value: "" });
     setResponse(null);
     setError(null);
   }
@@ -85,4 +83,3 @@ export function useSearch(initialType: string = "") {
     fetchJobs,
   };
 }
-

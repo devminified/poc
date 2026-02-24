@@ -11,7 +11,6 @@ import {
 import { db } from "@/lib/firebase";
 
 interface SearchParams {
-  type: string;
   keyword: string;
   theme: string;
   value: string;

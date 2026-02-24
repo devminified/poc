@@ -3,15 +3,6 @@
 import Link from "next/link";
 import { useSearch } from "@/hooks";
 
-const SEARCH_TYPES = ["Exact Match", "Contains", "Starts With", "Ends With"];
-const THEMES = [
-  "",
-  "Jobs, training and education",
-  "Pensions and benefits",
-  "Social Development and Community Building",
-  "Working conditions and workplace relations",
-];
-
 export default function Home() {
   const {
     params,
@@ -21,7 +12,7 @@ export default function Home() {
     response,
     handleSubmit,
     handleReset,
-  } = useSearch(SEARCH_TYPES[0]);
+  } = useSearch();
 
   return (
     <div className="px-4 pt-12 pb-12 font-sans sm:px-6 lg:px-8">
@@ -36,13 +27,13 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label
                 htmlFor="keyword"
                 className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Search by keyword
+                Keyword
               </label>
               <input
                 id="keyword"
@@ -59,50 +50,22 @@ export default function Home() {
 
             <div>
               <label
-                htmlFor="type"
+                htmlFor="theme"
                 className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
                 Type
               </label>
-              <select
-                id="type"
-                value={params.type}
-                onChange={(e) =>
-                  setParams((p) => ({ ...p, type: e.target.value }))
-                }
-                disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
-              >
-                {SEARCH_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="theme"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
-              >
-                Theme
-              </label>
-              <select
+              <input
                 id="theme"
+                type="text"
+                placeholder="e.g. Jobs, training and education"
                 value={params.theme}
                 onChange={(e) =>
                   setParams((p) => ({ ...p, theme: e.target.value }))
                 }
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
-              >
-                {THEMES.map((t) => (
-                  <option key={t} value={t}>
-                    {t || "All"}
-                  </option>
-                ))}
-              </select>
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+              />
             </div>
 
             <div>
@@ -136,7 +99,7 @@ export default function Home() {
             </button>
             <button
               type="button"
-              onClick={() => handleReset(SEARCH_TYPES[0])}
+              onClick={() => handleReset()}
               disabled={loading}
               className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
@@ -203,26 +166,29 @@ export default function Home() {
                             </svg>
                           </a>
                         </div>
-                        {item.value && (
-                          <p className="mt-1 truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            {item.value}
-                          </p>
-                        )}
                         {item.description && (
                           <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
                             {item.description}
                           </p>
                         )}
+                        {item.value && (
+                          <p className="mt-2 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                            <span className="font-medium text-zinc-700 dark:text-zinc-300">Amount:</span>{" "}
+                            {item.value}
+                          </p>
+                        )}
                       </div>
                       {(item.date || item.status) && (
-                        <div className="w-1/3 shrink-0 text-right">
-                          {item.date && (
-                            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                        <div className="flex shrink-0 flex-col items-end justify-between self-stretch">
+                          {item.date ? (
+                            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                              <span className="font-medium text-zinc-700 dark:text-zinc-300">Due Date:</span>{" "}
                               {item.date}
                             </p>
-                          )}
+                          ) : <span />}
                           {item.status && (
-                            <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                              <span className="font-medium text-zinc-700 dark:text-zinc-300">Status:</span>{" "}
                               {item.status}
                             </p>
                           )}

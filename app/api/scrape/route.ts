@@ -14,7 +14,7 @@ interface ScrapedItem {
 
 export async function POST(request: NextRequest) {
   try {
-    const { type, keyword, theme, value } = await request.json();
+    const { keyword, theme, value } = await request.json();
 
     // All filters are optional — empty request returns all programs
 
@@ -59,10 +59,10 @@ export async function POST(request: NextRequest) {
     const allPrograms = parseScrapedData(scrapingData);
 
     const searchTerm = keyword;
-    const results = filterResults(allPrograms, searchTerm, type, theme, value);
+    const results = filterResults(allPrograms, searchTerm, theme, value);
 
     const docRef = await addDoc(collection(db, "searches"), {
-      searchParams: { type, keyword, theme, value },
+      searchParams: { keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
       createdAt: serverTimestamp(),
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       id: docRef.id,
-      searchParams: { type, keyword, theme, value },
+      searchParams: { keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
     });
@@ -119,12 +119,15 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
       const text = li.replace(/<[^>]*>/g, "").trim();
       if (/status/i.test(text) || /accept/i.test(text) || /closed/i.test(text) || /forecasted/i.test(text)) {
         status = text.replace(/^status\s*:\s*/i, "");
-      } else if (/theme/i.test(text)) {
-        theme = text.replace(/^theme\s*:\s*/i, "");
       } else if (/\$/.test(text) || /funding amount/i.test(text) || /value/i.test(text)) {
         itemValue = text.replace(/^value\s*:\s*/i, "");
       } else if (/date/i.test(text) || /deadline/i.test(text) || /until/i.test(text)) {
         date = text.replace(/^date\s*:\s*/i, "");
+      } else if (/theme/i.test(text)) {
+        theme = text.replace(/^theme\s*:\s*/i, "");
+      } else if (!theme && text.length > 3 && text.length < 100) {
+        // Unmatched list item is likely the type/theme category
+        theme = text;
       }
     }
 
@@ -134,13 +137,23 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
         || status.match(/((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}.*)/i);
       if (dateMatch) {
         date = dateMatch[1].trim();
+        // Strip the date portion from status
+        status = status.replace(/\s+(?:from|until|by)\s+.*/i, "").trim();
+      }
+    }
+
+    // Clean up value to only keep the dollar amount portion
+    if (itemValue) {
+      const valMatch = itemValue.match(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i);
+      if (valMatch) {
+        itemValue = valMatch[0].trim();
       }
     }
 
     // If no value found in <li> items, search the full block for dollar amounts
     if (!itemValue) {
       const blockText = block.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-      const dollarMatch = blockText.match(/[^.]*\$[\d,]+[^.]*/);
+      const dollarMatch = blockText.match(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i);
       if (dollarMatch) {
         itemValue = dollarMatch[0].trim();
       }
@@ -155,7 +168,6 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 function filterResults(
   items: ScrapedItem[],
   searchTerm: string,
-  matchType: string,
   themeFilter?: string,
   valueFilter?: string
 ): ScrapedItem[] {
@@ -172,18 +184,6 @@ function filterResults(
 
     const term = searchTerm.toLowerCase();
     const haystack = `${item.title} ${item.description} ${item.theme}`.toLowerCase();
-
-    switch (matchType) {
-      case "Exact Match":
-        return haystack.includes(term);
-      case "Contains":
-        return haystack.includes(term);
-      case "Starts With":
-        return item.title.toLowerCase().startsWith(term);
-      case "Ends With":
-        return item.title.toLowerCase().endsWith(term);
-      default:
-        return haystack.includes(term);
-    }
+    return haystack.includes(term);
   });
 }
