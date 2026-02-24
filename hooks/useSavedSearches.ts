@@ -13,6 +13,8 @@ import { db } from "@/lib/firebase";
 interface SearchParams {
   type: string;
   keyword: string;
+  theme: string;
+  value: string;
 }
 
 interface ScrapedItem {
@@ -21,6 +23,8 @@ interface ScrapedItem {
   description: string;
   status: string;
   theme: string;
+  value: string;
+  date: string;
 }
 
 interface SavedSearch {

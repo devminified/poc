@@ -8,18 +8,15 @@ interface ScrapedItem {
   description: string;
   status: string;
   theme: string;
+  value: string;
+  date: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { type, keyword } = await request.json();
+    const { type, keyword, theme, value } = await request.json();
 
-    if (!keyword) {
-      return NextResponse.json(
-        { error: "Search term is required" },
-        { status: 400 }
-      );
-    }
+    // All filters are optional — empty request returns all programs
 
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     const targetUrl = process.env.SCRAPINGBEE_TARGET_URL;
@@ -62,10 +59,10 @@ export async function POST(request: NextRequest) {
     const allPrograms = parseScrapedData(scrapingData);
 
     const searchTerm = keyword;
-    const results = filterResults(allPrograms, searchTerm, type);
+    const results = filterResults(allPrograms, searchTerm, type, theme, value);
 
     const docRef = await addDoc(collection(db, "searches"), {
-      searchParams: { type, keyword },
+      searchParams: { type, keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
       createdAt: serverTimestamp(),
@@ -73,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       id: docRef.id,
-      searchParams: { type, keyword },
+      searchParams: { type, keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
     });
@@ -115,6 +112,8 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 
     let status = "";
     let theme = "";
+    let itemValue = "";
+    let date = "";
     const listItems = block.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) || [];
     for (const li of listItems) {
       const text = li.replace(/<[^>]*>/g, "").trim();
@@ -122,10 +121,32 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
         status = text.replace(/^status\s*:\s*/i, "");
       } else if (/theme/i.test(text)) {
         theme = text.replace(/^theme\s*:\s*/i, "");
+      } else if (/\$/.test(text) || /funding amount/i.test(text) || /value/i.test(text)) {
+        itemValue = text.replace(/^value\s*:\s*/i, "");
+      } else if (/date/i.test(text) || /deadline/i.test(text) || /until/i.test(text)) {
+        date = text.replace(/^date\s*:\s*/i, "");
       }
     }
 
-    items.push({ title, url, description, status, theme });
+    // Extract date from status text if not found separately
+    if (!date && status) {
+      const dateMatch = status.match(/((?:from|until|by)\s.+)/i)
+        || status.match(/((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}.*)/i);
+      if (dateMatch) {
+        date = dateMatch[1].trim();
+      }
+    }
+
+    // If no value found in <li> items, search the full block for dollar amounts
+    if (!itemValue) {
+      const blockText = block.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+      const dollarMatch = blockText.match(/[^.]*\$[\d,]+[^.]*/);
+      if (dollarMatch) {
+        itemValue = dollarMatch[0].trim();
+      }
+    }
+
+    items.push({ title, url, description, status, theme, value: itemValue, date });
   }
 
   return items;
@@ -134,13 +155,22 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 function filterResults(
   items: ScrapedItem[],
   searchTerm: string,
-  matchType: string
+  matchType: string,
+  themeFilter?: string,
+  valueFilter?: string
 ): ScrapedItem[] {
-  if (!searchTerm) return items;
-
-  const term = searchTerm.toLowerCase();
-
   return items.filter((item) => {
+    if (themeFilter && !item.theme.toLowerCase().includes(themeFilter.toLowerCase())) {
+      return false;
+    }
+
+    if (valueFilter && !item.value.toLowerCase().includes(valueFilter.toLowerCase())) {
+      return false;
+    }
+
+    if (!searchTerm) return true;
+
+    const term = searchTerm.toLowerCase();
     const haystack = `${item.title} ${item.description} ${item.theme}`.toLowerCase();
 
     switch (matchType) {

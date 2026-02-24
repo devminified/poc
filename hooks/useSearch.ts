@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 
 interface SearchParams {
   type: string;
   keyword: string;
+  theme: string;
+  value: string;
 }
 
 interface ScrapedItem {
@@ -13,6 +15,8 @@ interface ScrapedItem {
   description: string;
   status: string;
   theme: string;
+  value: string;
+  date: string;
 }
 
 interface SearchResponse {
@@ -26,13 +30,14 @@ export function useSearch(initialType: string = "") {
   const [params, setParams] = useState<SearchParams>({
     type: initialType,
     keyword: "",
+    theme: "",
+    value: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<SearchResponse | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  const fetchJobs = useCallback(async (overrideParams?: SearchParams) => {
     setLoading(true);
     setError(null);
     setResponse(null);
@@ -41,7 +46,7 @@ export function useSearch(initialType: string = "") {
       const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
+        body: JSON.stringify(overrideParams ?? params),
       });
 
       const data = await res.json();
@@ -56,10 +61,15 @@ export function useSearch(initialType: string = "") {
     } finally {
       setLoading(false);
     }
+  }, [params]);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    fetchJobs();
   }
 
   function handleReset(resetType: string = initialType) {
-    setParams({ type: resetType, keyword: "" });
+    setParams({ type: resetType, keyword: "", theme: "", value: "" });
     setResponse(null);
     setError(null);
   }
@@ -72,6 +82,7 @@ export function useSearch(initialType: string = "") {
     response,
     handleSubmit,
     handleReset,
+    fetchJobs,
   };
 }
 

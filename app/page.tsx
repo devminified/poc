@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useSearch } from "@/hooks";
 
 const SEARCH_TYPES = ["Exact Match", "Contains", "Starts With", "Ends With"];
+const THEMES = [
+  "",
+  "Jobs, training and education",
+  "Pensions and benefits",
+  "Social Development and Community Building",
+  "Working conditions and workplace relations",
+];
 
 export default function Home() {
   const {
@@ -21,7 +28,7 @@ export default function Home() {
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-6">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Search Configuration
+            Search
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Set your search parameters below.
@@ -35,12 +42,11 @@ export default function Home() {
                 htmlFor="keyword"
                 className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Search
+                Search by keyword
               </label>
               <input
                 id="keyword"
                 type="text"
-                required
                 placeholder="Enter search term"
                 value={params.keyword}
                 onChange={(e) =>
@@ -74,6 +80,50 @@ export default function Home() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label
+                htmlFor="theme"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                Theme
+              </label>
+              <select
+                id="theme"
+                value={params.theme}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, theme: e.target.value }))
+                }
+                disabled={loading}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+              >
+                {THEMES.map((t) => (
+                  <option key={t} value={t}>
+                    {t || "All"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="value"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                Value
+              </label>
+              <input
+                id="value"
+                type="text"
+                placeholder="e.g. $500,000"
+                value={params.value}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, value: e.target.value }))
+                }
+                disabled={loading}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+              />
+            </div>
           </div>
 
           <div className="mt-4 flex gap-3">
@@ -103,11 +153,10 @@ export default function Home() {
 
         {response && (
           <div className="mt-8">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Results ({response.results.length} of {response.totalScraped}{" "}
-                programs)
-              </h2>
+            <div className="mb-4">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                {response.results.length} of {response.totalScraped} programs
+              </p>
             </div>
 
             {response.results.length === 0 ? (
@@ -123,54 +172,63 @@ export default function Home() {
                     key={i}
                     className="rounded-lg border border-zinc-200 bg-zinc-100 p-4 dark:border-zinc-800 dark:bg-zinc-900"
                   >
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/program?url=${encodeURIComponent(item.url)}`}
-                        className="text-sm font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500 dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-400"
-                      >
-                        {item.title}
-                      </Link>
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
-                        title="Open on Canada.ca"
-                      >
-                        <svg
-                          className="h-3.5 w-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
-                      </a>
-                    </div>
-                    {item.description && (
-                      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                        {item.description}
-                      </p>
-                    )}
-                    {(item.status || item.theme) && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {item.status && (
-                          <span className="inline-block rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                            {item.status}
-                          </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Link
+                            href={`/program?url=${encodeURIComponent(item.url)}`}
+                            className="truncate text-sm font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-500 dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-400"
+                          >
+                            {item.title}
+                          </Link>
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-zinc-400 transition-colors hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+                            title="Open on Canada.ca"
+                          >
+                            <svg
+                              className="h-3.5 w-3.5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
+                        </div>
+                        {item.value && (
+                          <p className="mt-1 truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            {item.value}
+                          </p>
                         )}
-                        {item.theme && (
-                          <span className="inline-block rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                            {item.theme}
-                          </span>
+                        {item.description && (
+                          <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                            {item.description}
+                          </p>
                         )}
                       </div>
-                    )}
+                      {(item.date || item.status) && (
+                        <div className="w-1/3 shrink-0 text-right">
+                          {item.date && (
+                            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">
+                              {item.date}
+                            </p>
+                          )}
+                          {item.status && (
+                            <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                              {item.status}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
