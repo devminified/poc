@@ -116,10 +116,11 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
       url = `https://www.canada.ca${url}`;
     }
 
-    const descMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    const description = descMatch
-      ? descMatch[1].replace(/<[^>]*>/g, "").trim()
-      : "";
+    const descMatches = block.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const description = descMatches
+      .map((p) => p.replace(/<[^>]*>/g, "").trim())
+      .filter(Boolean)
+      .join(" ");
 
     let status = "";
     let theme = "";
