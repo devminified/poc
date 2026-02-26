@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     const scrapingBeeUrl = new URL("https://app.scrapingbee.com/api/v1/");
     scrapingBeeUrl.searchParams.set("api_key", apiKey);
     scrapingBeeUrl.searchParams.set("url", targetUrl);
-    scrapingBeeUrl.searchParams.set("render_js", "false");
+    scrapingBeeUrl.searchParams.set("render_js", "true");
     scrapingBeeUrl.searchParams.set("json_response", "true");
     scrapingBeeUrl.searchParams.set("forward_headers", "true");
 
