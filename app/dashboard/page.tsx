@@ -78,7 +78,7 @@ export default function Dashboard() {
       <div className="mx-auto w-full max-w-4xl">
         <div className="mb-6">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Listing
+            Saved Searches
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Review your past search results.
