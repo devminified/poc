@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collection, addDoc, getDocs, deleteDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface ScrapedItem {
@@ -24,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey || !targetUrl) {
       return NextResponse.json(
         { error: "ScrapingBee configuration is missing" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -50,7 +56,7 @@ export async function POST(request: NextRequest) {
       console.error("ScrapingBee error:", response.status, errorText);
       return NextResponse.json(
         { error: `ScrapingBee request failed: ${response.status}` },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -59,7 +65,33 @@ export async function POST(request: NextRequest) {
     const allPrograms = parseScrapedData(scrapingData);
 
     const searchTerm = keyword;
-    const results = filterResults(allPrograms, searchTerm, theme, value);
+
+    // Load cached detail page content for keyword matching
+    const detailTexts = new Map<string, string>();
+    if (searchTerm) {
+      const detailSnapshot = await getDocs(collection(db, "program_details"));
+      detailSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.url) {
+          const text = [
+            data.descriptionHtml?.replace(/<[^>]*>/g, "") || "",
+            ...(data.sections || []).map(
+              (s: { heading: string; contentHtml: string }) =>
+                `${s.heading} ${s.contentHtml?.replace(/<[^>]*>/g, "") || ""}`,
+            ),
+          ].join(" ");
+          detailTexts.set(data.url, text);
+        }
+      });
+    }
+
+    const results = filterResults(
+      allPrograms,
+      searchTerm,
+      theme,
+      value,
+      detailTexts,
+    );
 
     await addDoc(collection(db, "searches"), {
       searchParams: { keyword, theme, value },
@@ -77,7 +109,7 @@ export async function POST(request: NextRequest) {
     console.error("Scrape API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -90,7 +122,10 @@ export async function DELETE() {
     return NextResponse.json({ deleted: snapshot.size });
   } catch (error) {
     console.error("Delete error:", error);
-    return NextResponse.json({ error: "Failed to clear searches" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to clear searches" },
+      { status: 500 },
+    );
   }
 }
 
@@ -104,7 +139,7 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
     const block = blocks[i];
 
     const linkMatch = block.match(
-      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
+      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i,
     );
     if (!linkMatch) continue;
 
@@ -129,11 +164,24 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
     const listItems = block.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) || [];
     for (const li of listItems) {
       const text = li.replace(/<[^>]*>/g, "").trim();
-      if (/status/i.test(text) || /accept/i.test(text) || /closed/i.test(text) || /forecasted/i.test(text)) {
+      if (
+        /status/i.test(text) ||
+        /accept/i.test(text) ||
+        /closed/i.test(text) ||
+        /forecasted/i.test(text)
+      ) {
         status = text.replace(/^status\s*:\s*/i, "");
-      } else if (/\$/.test(text) || /funding amount/i.test(text) || /value/i.test(text)) {
+      } else if (
+        /\$/.test(text) ||
+        /funding amount/i.test(text) ||
+        /value/i.test(text)
+      ) {
         itemValue = text.replace(/^value\s*:\s*/i, "");
-      } else if (/date/i.test(text) || /deadline/i.test(text) || /until/i.test(text)) {
+      } else if (
+        /date/i.test(text) ||
+        /deadline/i.test(text) ||
+        /until/i.test(text)
+      ) {
         date = text.replace(/^date\s*:\s*/i, "");
       } else if (/theme/i.test(text)) {
         theme = text.replace(/^theme\s*:\s*/i, "");
@@ -145,8 +193,11 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 
     // Extract date from status text if not found separately
     if (!date && status) {
-      const dateMatch = status.match(/((?:from|until|by)\s.+)/i)
-        || status.match(/((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}.*)/i);
+      const dateMatch =
+        status.match(/((?:from|until|by)\s.+)/i) ||
+        status.match(
+          /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}.*)/i,
+        );
       if (dateMatch) {
         date = dateMatch[1].trim();
         // Strip the date portion from status
@@ -156,7 +207,9 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 
     // Clean up value to only keep the dollar amount portion
     if (itemValue) {
-      const valMatch = itemValue.match(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i);
+      const valMatch = itemValue.match(
+        /(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i,
+      );
       if (valMatch) {
         itemValue = valMatch[0].trim();
       }
@@ -165,13 +218,23 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
     // If no value found in <li> items, search the full block for dollar amounts
     if (!itemValue) {
       const blockText = block.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
-      const dollarMatch = blockText.match(/(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i);
+      const dollarMatch = blockText.match(
+        /(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i,
+      );
       if (dollarMatch) {
         itemValue = dollarMatch[0].trim();
       }
     }
 
-    items.push({ title, url, description, status, theme, value: itemValue, date });
+    items.push({
+      title,
+      url,
+      description,
+      status,
+      theme,
+      value: itemValue,
+      date,
+    });
   }
 
   return items;
@@ -181,21 +244,35 @@ function filterResults(
   items: ScrapedItem[],
   searchTerm: string,
   themeFilter?: string,
-  valueFilter?: string
+  valueFilter?: string,
+  detailTexts?: Map<string, string>,
 ): ScrapedItem[] {
   return items.filter((item) => {
-    if (themeFilter && !item.theme.toLowerCase().includes(themeFilter.toLowerCase())) {
+    if (
+      themeFilter &&
+      !item.theme.toLowerCase().includes(themeFilter.toLowerCase())
+    ) {
       return false;
     }
 
-    if (valueFilter && !item.value.toLowerCase().includes(valueFilter.toLowerCase())) {
+    if (
+      valueFilter &&
+      !item.value.toLowerCase().includes(valueFilter.toLowerCase())
+    ) {
       return false;
     }
 
     if (!searchTerm) return true;
 
     const term = searchTerm.toLowerCase();
-    const haystack = `${item.title} ${item.description} ${item.theme} ${item.status} ${item.value} ${item.date}`.toLowerCase();
-    return haystack.includes(term);
+    const listingHaystack =
+      `${item.title} ${item.description} ${item.theme} ${item.status} ${item.value} ${item.date}`.toLowerCase();
+    if (listingHaystack.includes(term)) return true;
+
+    // Also search in cached detail page content
+    const detailText = detailTexts?.get(item.url);
+    if (detailText && detailText.toLowerCase().includes(term)) return true;
+
+    return false;
   });
 }
