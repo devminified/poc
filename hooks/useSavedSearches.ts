@@ -11,8 +11,9 @@ import {
 import { db } from "@/lib/firebase";
 
 interface SearchParams {
-  type: string;
   keyword: string;
+  theme: string;
+  value: string;
 }
 
 interface ScrapedItem {
@@ -21,6 +22,8 @@ interface ScrapedItem {
   description: string;
   status: string;
   theme: string;
+  value: string;
+  date: string;
 }
 
 interface SavedSearch {
@@ -37,10 +40,7 @@ export function useSavedSearches() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "searches"),
-      orderBy("createdAt", "desc")
-    );
+    const q = query(collection(db, "searches"), orderBy("createdAt", "desc"));
 
     const unsubscribe = onSnapshot(
       q,
@@ -57,7 +57,7 @@ export function useSavedSearches() {
         console.error("Firestore listener error:", err);
         setError("Failed to load saved searches");
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -65,4 +65,3 @@ export function useSavedSearches() {
 
   return { searches, loading, error };
 }
-

@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface ScrapedItem {
@@ -8,18 +14,15 @@ interface ScrapedItem {
   description: string;
   status: string;
   theme: string;
+  value: string;
+  date: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { type, keyword } = await request.json();
+    const { keyword, theme, value } = await request.json();
 
-    if (!keyword) {
-      return NextResponse.json(
-        { error: "Search term is required" },
-        { status: 400 }
-      );
-    }
+    // All filters are optional — empty request returns all programs
 
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     const targetUrl = process.env.SCRAPINGBEE_TARGET_URL;
@@ -27,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey || !targetUrl) {
       return NextResponse.json(
         { error: "ScrapingBee configuration is missing" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
       console.error("ScrapingBee error:", response.status, errorText);
       return NextResponse.json(
         { error: `ScrapingBee request failed: ${response.status}` },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -62,18 +65,43 @@ export async function POST(request: NextRequest) {
     const allPrograms = parseScrapedData(scrapingData);
 
     const searchTerm = keyword;
-    const results = filterResults(allPrograms, searchTerm, type);
 
-    const docRef = await addDoc(collection(db, "searches"), {
-      searchParams: { type, keyword },
+    // Load cached detail page content for keyword matching
+    const detailTexts = new Map<string, string>();
+    if (searchTerm) {
+      const detailSnapshot = await getDocs(collection(db, "program_details"));
+      detailSnapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.url) {
+          const text = [
+            data.descriptionHtml?.replace(/<[^>]*>/g, "") || "",
+            ...(data.sections || []).map(
+              (s: { heading: string; contentHtml: string }) =>
+                `${s.heading} ${s.contentHtml?.replace(/<[^>]*>/g, "") || ""}`,
+            ),
+          ].join(" ");
+          detailTexts.set(data.url, text);
+        }
+      });
+    }
+
+    const results = filterResults(
+      allPrograms,
+      searchTerm,
+      theme,
+      value,
+      detailTexts,
+    );
+
+    await addDoc(collection(db, "searches"), {
+      searchParams: { keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
       createdAt: serverTimestamp(),
     });
 
     return NextResponse.json({
-      id: docRef.id,
-      searchParams: { type, keyword },
+      searchParams: { keyword, theme, value },
       results,
       totalScraped: allPrograms.length,
     });
@@ -81,7 +109,22 @@ export async function POST(request: NextRequest) {
     console.error("Scrape API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    const snapshot = await getDocs(collection(db, "searches"));
+    const deletes = snapshot.docs.map((doc) => deleteDoc(doc.ref));
+    await Promise.all(deletes);
+    return NextResponse.json({ deleted: snapshot.size });
+  } catch (error) {
+    console.error("Delete error:", error);
+    return NextResponse.json(
+      { error: "Failed to clear searches" },
+      { status: 500 },
     );
   }
 }
@@ -96,7 +139,7 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
     const block = blocks[i];
 
     const linkMatch = block.match(
-      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
+      /<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i,
     );
     if (!linkMatch) continue;
 
@@ -108,24 +151,90 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
       url = `https://www.canada.ca${url}`;
     }
 
-    const descMatch = block.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    const description = descMatch
-      ? descMatch[1].replace(/<[^>]*>/g, "").trim()
-      : "";
+    const descMatches = block.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+    const description = descMatches
+      .map((p) => p.replace(/<[^>]*>/g, "").trim())
+      .filter(Boolean)
+      .join(" ");
 
     let status = "";
     let theme = "";
+    let itemValue = "";
+    let date = "";
     const listItems = block.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) || [];
     for (const li of listItems) {
       const text = li.replace(/<[^>]*>/g, "").trim();
-      if (/status/i.test(text) || /accept/i.test(text) || /closed/i.test(text) || /forecasted/i.test(text)) {
+      if (
+        /status/i.test(text) ||
+        /accept/i.test(text) ||
+        /closed/i.test(text) ||
+        /forecasted/i.test(text)
+      ) {
         status = text.replace(/^status\s*:\s*/i, "");
+      } else if (
+        /\$/.test(text) ||
+        /funding amount/i.test(text) ||
+        /value/i.test(text)
+      ) {
+        itemValue = text.replace(/^value\s*:\s*/i, "");
+      } else if (
+        /date/i.test(text) ||
+        /deadline/i.test(text) ||
+        /until/i.test(text)
+      ) {
+        date = text.replace(/^date\s*:\s*/i, "");
       } else if (/theme/i.test(text)) {
         theme = text.replace(/^theme\s*:\s*/i, "");
+      } else if (!theme && text.length > 3 && text.length < 100) {
+        // Unmatched list item is likely the type/theme category
+        theme = text;
       }
     }
 
-    items.push({ title, url, description, status, theme });
+    // Extract date from status text if not found separately
+    if (!date && status) {
+      const dateMatch =
+        status.match(/((?:from|until|by)\s.+)/i) ||
+        status.match(
+          /((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}.*)/i,
+        );
+      if (dateMatch) {
+        date = dateMatch[1].trim();
+        // Strip the date portion from status
+        status = status.replace(/\s+(?:from|until|by)\s+.*/i, "").trim();
+      }
+    }
+
+    // Clean up value to only keep the dollar amount portion
+    if (itemValue) {
+      const valMatch = itemValue.match(
+        /(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i,
+      );
+      if (valMatch) {
+        itemValue = valMatch[0].trim();
+      }
+    }
+
+    // If no value found in <li> items, search the full block for dollar amounts
+    if (!itemValue) {
+      const blockText = block.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
+      const dollarMatch = blockText.match(
+        /(?:up to\s+)?\$[\d,]+(?:\.\d{2})?(?:\s+(?:and a maximum of|to)\s+\$[\d,]+(?:\.\d{2})?)?(?:\s+per\s+\w+)?/i,
+      );
+      if (dollarMatch) {
+        itemValue = dollarMatch[0].trim();
+      }
+    }
+
+    items.push({
+      title,
+      url,
+      description,
+      status,
+      theme,
+      value: itemValue,
+      date,
+    });
   }
 
   return items;
@@ -134,26 +243,36 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
 function filterResults(
   items: ScrapedItem[],
   searchTerm: string,
-  matchType: string
+  themeFilter?: string,
+  valueFilter?: string,
+  detailTexts?: Map<string, string>,
 ): ScrapedItem[] {
-  if (!searchTerm) return items;
-
-  const term = searchTerm.toLowerCase();
-
   return items.filter((item) => {
-    const haystack = `${item.title} ${item.description} ${item.theme}`.toLowerCase();
-
-    switch (matchType) {
-      case "Exact Match":
-        return haystack.includes(term);
-      case "Contains":
-        return haystack.includes(term);
-      case "Starts With":
-        return item.title.toLowerCase().startsWith(term);
-      case "Ends With":
-        return item.title.toLowerCase().endsWith(term);
-      default:
-        return haystack.includes(term);
+    if (
+      themeFilter &&
+      !item.theme.toLowerCase().includes(themeFilter.toLowerCase())
+    ) {
+      return false;
     }
+
+    if (
+      valueFilter &&
+      !item.value.toLowerCase().includes(valueFilter.toLowerCase())
+    ) {
+      return false;
+    }
+
+    if (!searchTerm) return true;
+
+    const term = searchTerm.toLowerCase();
+    const listingHaystack =
+      `${item.title} ${item.description} ${item.theme} ${item.status} ${item.value} ${item.date}`.toLowerCase();
+    if (listingHaystack.includes(term)) return true;
+
+    // Also search in cached detail page content
+    const detailText = detailTexts?.get(item.url);
+    if (detailText && detailText.toLowerCase().includes(term)) return true;
+
+    return false;
   });
 }
