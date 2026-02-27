@@ -18,6 +18,44 @@ interface ScrapedItem {
   date: string;
 }
 
+interface DetailSection {
+  heading: string;
+  contentHtml: string;
+}
+
+function htmlToText(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/&rsquo;/gi, "'")
+    .replace(/&lsquo;/gi, "'")
+    .replace(/&rdquo;/gi, '"')
+    .replace(/&ldquo;/gi, '"')
+    .replace(/&mdash;/gi, "—")
+    .replace(/&ndash;/gi, "–")
+    .replace(/&#\d+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractDetailText(data: {
+  descriptionHtml?: string;
+  sections?: DetailSection[];
+}): string {
+  return [
+    htmlToText(data.descriptionHtml || ""),
+    ...(data.sections || []).map(
+      (s) => `${s.heading} ${htmlToText(s.contentHtml || "")}`,
+    ),
+  ].join(" ");
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { keyword, theme, value } = await request.json();
@@ -73,14 +111,7 @@ export async function POST(request: NextRequest) {
       detailSnapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (data.url) {
-          const text = [
-            data.descriptionHtml?.replace(/<[^>]*>/g, "") || "",
-            ...(data.sections || []).map(
-              (s: { heading: string; contentHtml: string }) =>
-                `${s.heading} ${s.contentHtml?.replace(/<[^>]*>/g, "") || ""}`,
-            ),
-          ].join(" ");
-          detailTexts.set(data.url, text);
+          detailTexts.set(data.url, extractDetailText(data));
         }
       });
     }
