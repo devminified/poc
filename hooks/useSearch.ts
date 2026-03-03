@@ -5,7 +5,8 @@ import { useState, useCallback, type FormEvent } from "react";
 interface SearchParams {
   keyword: string;
   theme: string;
-  value: string;
+  amountMin: string;
+  amountMax: string;
 }
 
 interface ScrapedItem {
@@ -25,19 +26,28 @@ interface SearchResponse {
   totalScraped: number;
 }
 
+function parseAmount(raw: string): number | null {
+  if (!raw.trim()) return null;
+  const num = parseFloat(raw.replace(/[,$\s]/g, ""));
+  return isNaN(num) ? null : num;
+}
+
 export function useSearch() {
   const [params, setParams] = useState<SearchParams>({
     keyword: "",
     theme: "",
-    value: "",
+    amountMin: "",
+    amountMax: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [response, setResponse] = useState<SearchResponse | null>(null);
 
   const fetchJobs = useCallback(async (overrideParams?: SearchParams) => {
     setLoading(true);
     setError(null);
+    setAmountError(null);
     setResponse(null);
 
     try {
@@ -63,13 +73,24 @@ export function useSearch() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setAmountError(null);
+
+    const min = parseAmount(params.amountMin);
+    const max = parseAmount(params.amountMax);
+
+    if (min !== null && max !== null && max < min) {
+      setAmountError("Max amount cannot be less than min amount.");
+      return;
+    }
+
     fetchJobs();
   }
 
   function handleReset() {
-    setParams({ keyword: "", theme: "", value: "" });
+    setParams({ keyword: "", theme: "", amountMin: "", amountMax: "" });
     setResponse(null);
     setError(null);
+    setAmountError(null);
   }
 
   return {
@@ -77,6 +98,7 @@ export function useSearch() {
     setParams,
     loading,
     error,
+    amountError,
     response,
     handleSubmit,
     handleReset,
