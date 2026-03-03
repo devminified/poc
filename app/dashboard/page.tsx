@@ -25,11 +25,13 @@ function extractDate(status: string, existingDate: string): string {
   return m ? m[1].trim() : "";
 }
 
-function formatSearchLabel(params: { keyword: string; theme: string; value: string }): string {
+function formatSearchLabel(params: { keyword: string; theme: string; amountMin: string; amountMax: string }): string {
   const parts: string[] = [];
   if (params.keyword) parts.push(`Keyword: ${params.keyword}`);
   if (params.theme) parts.push(`Type: ${params.theme}`);
-  if (params.value) parts.push(`Value: ${params.value}`);
+  if (params.amountMin && params.amountMax) parts.push(`Amount: ${params.amountMin} – ${params.amountMax}`);
+  else if (params.amountMin) parts.push(`Amount: ${params.amountMin}+`);
+  else if (params.amountMax) parts.push(`Amount: up to ${params.amountMax}`);
   return parts.length > 0 ? parts.join(" | ") : "All Programs";
 }
 

@@ -9,6 +9,7 @@ export default function Home() {
     setParams,
     loading,
     error,
+    amountError,
     response,
     handleSubmit,
     handleReset,
@@ -27,7 +28,7 @@ export default function Home() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div>
               <label
                 htmlFor="keyword"
@@ -70,24 +71,50 @@ export default function Home() {
 
             <div>
               <label
-                htmlFor="value"
+                htmlFor="amountMin"
                 className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Value
+                Min Amount
               </label>
               <input
-                id="value"
+                id="amountMin"
                 type="text"
-                placeholder="e.g. $500,000"
-                value={params.value}
+                placeholder="e.g. $1,000"
+                value={params.amountMin}
                 onChange={(e) =>
-                  setParams((p) => ({ ...p, value: e.target.value }))
+                  setParams((p) => ({ ...p, amountMin: e.target.value }))
                 }
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 ${amountError ? "border-red-400 focus:border-red-500 focus:ring-red-200 dark:border-red-600 dark:focus:border-red-500 dark:focus:ring-red-900" : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200 dark:border-zinc-700 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"}`}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="amountMax"
+                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
+                Max Amount
+              </label>
+              <input
+                id="amountMax"
+                type="text"
+                placeholder="e.g. $500,000"
+                value={params.amountMax}
+                onChange={(e) =>
+                  setParams((p) => ({ ...p, amountMax: e.target.value }))
+                }
+                disabled={loading}
+                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 ${amountError ? "border-red-400 focus:border-red-500 focus:ring-red-200 dark:border-red-600 dark:focus:border-red-500 dark:focus:ring-red-900" : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200 dark:border-zinc-700 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"}`}
               />
             </div>
           </div>
+
+          {amountError && (
+            <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+              {amountError}
+            </p>
+          )}
 
           <div className="mt-4 flex gap-3">
             <button

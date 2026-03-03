@@ -58,7 +58,7 @@ function extractDetailText(data: {
 
 export async function POST(request: NextRequest) {
   try {
-    const { keyword, theme, value } = await request.json();
+    const { keyword, theme, amountMin, amountMax } = await request.json();
 
     // All filters are optional — empty request returns all programs
 
@@ -120,19 +120,20 @@ export async function POST(request: NextRequest) {
       allPrograms,
       searchTerm,
       theme,
-      value,
+      amountMin,
+      amountMax,
       detailTexts,
     );
 
     await addDoc(collection(db, "searches"), {
-      searchParams: { keyword, theme, value },
+      searchParams: { keyword, theme, amountMin, amountMax },
       results,
       totalScraped: allPrograms.length,
       createdAt: serverTimestamp(),
     });
 
     return NextResponse.json({
-      searchParams: { keyword, theme, value },
+      searchParams: { keyword, theme, amountMin, amountMax },
       results,
       totalScraped: allPrograms.length,
     });
@@ -271,13 +272,23 @@ function parseScrapedData(data: Record<string, unknown>): ScrapedItem[] {
   return items;
 }
 
+function parseDollarAmount(text: string): number | null {
+  const match = text.match(/\$([\d,]+(?:\.\d{2})?)/);
+  if (!match) return null;
+  return parseFloat(match[1].replace(/,/g, ""));
+}
+
 function filterResults(
   items: ScrapedItem[],
   searchTerm: string,
   themeFilter?: string,
-  valueFilter?: string,
+  amountMin?: string,
+  amountMax?: string,
   detailTexts?: Map<string, string>,
 ): ScrapedItem[] {
+  const minAmount = amountMin ? parseDollarAmount(amountMin) ?? parseFloat(amountMin.replace(/[,$]/g, "")) : null;
+  const maxAmount = amountMax ? parseDollarAmount(amountMax) ?? parseFloat(amountMax.replace(/[,$]/g, "")) : null;
+
   return items.filter((item) => {
     if (
       themeFilter &&
@@ -286,10 +297,17 @@ function filterResults(
       return false;
     }
 
-    if (
-      valueFilter &&
-      !item.value.toLowerCase().includes(valueFilter.toLowerCase())
-    ) {
+    if ((minAmount !== null || maxAmount !== null) && item.value) {
+      const itemAmount = parseDollarAmount(item.value);
+      if (itemAmount !== null) {
+        if (minAmount !== null && itemAmount < minAmount) return false;
+        if (maxAmount !== null && itemAmount > maxAmount) return false;
+      } else if (minAmount !== null || maxAmount !== null) {
+        // Item has a value but it's not a parseable dollar amount — exclude
+        return false;
+      }
+    } else if ((minAmount !== null || maxAmount !== null) && !item.value) {
+      // No value on item but user specified an amount filter — exclude
       return false;
     }
 
