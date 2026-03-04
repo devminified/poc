@@ -58,7 +58,7 @@ function isPdfLink(link: { label: string; href: string }): boolean {
 
 function PdfLink({ link }: { link: { label: string; href: string } }) {
   return (
-    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
+    <div className="border-b border-zinc-200 bg-gray-200/50 last:border-b-0 dark:border-zinc-700">
       <a
         href={link.href}
         target="_blank"
@@ -105,7 +105,7 @@ function SectionAccordion({
   }
 
   return (
-    <div className="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
+    <div className="border-b border-zinc-200 bg-gray-200/50 last:border-b-0 dark:border-zinc-700">
       <button
         type="button"
         onClick={handleToggle}
@@ -131,7 +131,7 @@ function SectionAccordion({
       {expanded && (
         <div className="pb-4">
           {subpage.loading && (
-            <div className="flex items-center gap-2 py-3">
+            <div className="flex items-center justify-center gap-2 py-3">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-400" />
               <span className="text-sm text-zinc-500 dark:text-zinc-400">
                 Loading...
@@ -164,28 +164,30 @@ function ProgramContent() {
   const { detail, loading, error } = useProgramDetail(url);
 
   return (
-    <div className="flex items-start justify-center px-4 lg:px-8 pt-12 pb-12 font-sans">
-      <div className="w-full">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="mb-6 inline-flex items-center gap-1.5 cursor-pointer text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+    <div className="flex items-start justify-center px-4 lg:px-8 pt-28 pb-12 font-sans">
+      <div className="w-full relative">
+        <div className="fixed top-0 h-20 flex items-center md:items-end left-0 pl-20 md:pl-0 md:left-72 right-0 z-10 bg-zinc-50">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="md:mb-6 m-0 inline-flex items-center gap-1.5 cursor-pointer text-base text-black transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Back
-        </button>
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            Back
+          </button>
+        </div>
 
         {loading && (
           <div className="rounded-lg border border-zinc-200 bg-zinc-100 p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -302,9 +304,9 @@ function ProgramContent() {
                   return (
                     <div
                       key={i}
-                      className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="rounded-lg border border-zinc-200 bg-gray-200/50 p-5 dark:border-zinc-800 dark:bg-zinc-900"
                     >
-                      <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                      <h2 className="mb-3 text-lg font-semibold text-black dark:text-zinc-100">
                         {section.heading}
                       </h2>
                       <div
