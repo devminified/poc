@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/hooks";
+import Image from "next/image";
+import logoImage from "../public/assets/images/logo.svg";
 
 const NAV_ITEMS = [
   {
@@ -90,17 +92,25 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-zinc-200 bg-white transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-teal-700 transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${open ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0`}
       >
-        <div className="px-5 py-6">
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            POC
-          </h2>
+        <div className="bg-zinc-50 flex items-center justify-center py-4">
+          <strong className="flex items-center justify-center w-52">
+            <Link href='#' className="flex items-center gap-3 justify-center">
+              <Image
+                src={logoImage}
+                alt="Logo"
+                width={40}
+                height={40}
+                priority
+                className="w-full h-full"
+              />
+            </Link>
+          </strong>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="flex-1 space-y-1 pt-2">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.matchPaths);
             return (
@@ -108,11 +118,10 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
-                }`}
+                className={`flex items-center text-base gap-4 p-4 font-medium transition-colors ${active
+                  ? "bg-gray-700 text-zinc-100 dark:bg-zinc-800 dark:text-zinc-50"
+                  : "text-neutral-100 hover:bg-gray-700 hover:text-neutral-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-100"
+                  }`}
               >
                 {item.icon}
                 {item.label}
@@ -121,7 +130,7 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="border-t border-zinc-200 px-3 py-4 dark:border-zinc-800">
+        {/* <div className="border-t border-zinc-200 px-3 py-4 dark:border-zinc-800">
           {mounted && (
             <button
               type="button"
@@ -140,7 +149,7 @@ export default function Sidebar() {
               {theme === "dark" ? "Light mode" : "Dark mode"}
             </button>
           )}
-        </div>
+        </div> */}
       </aside>
     </>
   );

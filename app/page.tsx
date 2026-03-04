@@ -16,8 +16,8 @@ export default function Home() {
   } = useSearch();
 
   return (
-    <div className="px-4 pt-12 pb-12 font-sans sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-4xl">
+    <div className="px-4 pt-20 pb-12 font-sans sm:px-6 lg:px-8">
+      <div className="w-full">
         <div className="mb-6">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Search
@@ -26,33 +26,35 @@ export default function Home() {
             Set your search parameters below.
           </p>
         </div>
-
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <div>
+            <div className="relative">
               <label
                 htmlFor="keyword"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
               >
                 Keyword
               </label>
               <input
                 id="keyword"
                 type="text"
-                placeholder="Enter search term"
+                placeholder="Enter Search Term"
                 value={params.keyword}
                 onChange={(e) =>
                   setParams((p) => ({ ...p, keyword: e.target.value }))
                 }
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition
+                focus:border-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-300
+                disabled:opacity-50
+                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-900"
               />
             </div>
 
-            <div>
+            <div className="relative">
               <label
                 htmlFor="theme"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
               >
                 Type
               </label>
@@ -65,14 +67,17 @@ export default function Home() {
                   setParams((p) => ({ ...p, theme: e.target.value }))
                 }
                 disabled={loading}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"
+                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition
+                focus:border-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-300
+                disabled:opacity-50
+                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-900"
               />
             </div>
 
-            <div>
+            <div className="relative">
               <label
                 htmlFor="amountMin"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
               >
                 Min Amount
               </label>
@@ -85,14 +90,16 @@ export default function Home() {
                   setParams((p) => ({ ...p, amountMin: e.target.value }))
                 }
                 disabled={loading}
-                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 ${amountError ? "border-red-400 focus:border-red-500 focus:ring-red-200 dark:border-red-600 dark:focus:border-red-500 dark:focus:ring-red-900" : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200 dark:border-zinc-700 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"}`}
-              />
+                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition
+                focus:border-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-300
+                disabled:opacity-50
+                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-900" />
             </div>
 
-            <div>
+            <div className="relative">
               <label
                 htmlFor="amountMax"
-                className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300"
+                className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400"
               >
                 Max Amount
               </label>
@@ -105,7 +112,10 @@ export default function Home() {
                   setParams((p) => ({ ...p, amountMax: e.target.value }))
                 }
                 disabled={loading}
-                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 disabled:opacity-50 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 ${amountError ? "border-red-400 focus:border-red-500 focus:ring-red-200 dark:border-red-600 dark:focus:border-red-500 dark:focus:ring-red-900" : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200 dark:border-zinc-700 dark:focus:border-zinc-500 dark:focus:ring-zinc-800"}`}
+                className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-900 outline-none transition
+                focus:border-zinc-400 focus:bg-white focus:ring-1 focus:ring-zinc-300
+                disabled:opacity-50
+                dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-900"
               />
             </div>
           </div>
@@ -120,7 +130,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              className="rounded-lg bg-teal-700 cursor-pointer px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700/80 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
             >
               {loading ? "Searching..." : "Search"}
             </button>
@@ -128,7 +138,7 @@ export default function Home() {
               type="button"
               onClick={() => handleReset()}
               disabled={loading}
-              className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-lg border cursor-pointer border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Reset
             </button>

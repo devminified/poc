@@ -113,9 +113,8 @@ function SectionAccordion({
       >
         {link.label}
         <svg
-          className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${
-            expanded ? "rotate-180" : ""
-          }`}
+          className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${expanded ? "rotate-180" : ""
+            }`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -165,8 +164,8 @@ function ProgramContent() {
   const { detail, loading, error } = useProgramDetail(url);
 
   return (
-    <div className="flex items-start justify-center px-4 pt-12 pb-12 font-sans">
-      <div className="w-full max-w-2xl">
+    <div className="flex items-start justify-center px-4 lg:px-8 pt-12 pb-12 font-sans">
+      <div className="w-full">
         <button
           type="button"
           onClick={() => router.back()}
