@@ -77,7 +77,7 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 pt-12 pb-12 font-sans sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="w-full">
         <div className="mb-6">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Saved Searches
