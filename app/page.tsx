@@ -16,7 +16,7 @@ export default function Home() {
   } = useSearch();
 
   return (
-    <div className="px-4 pt-20 pb-12 font-sans sm:px-6 lg:px-8">
+    <div className="px-4 pt-14 pb-12 font-sans sm:px-6 lg:px-8">
       <div className="w-full">
         <div className="mb-6">
           <h1 className="mb-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -27,7 +27,7 @@ export default function Home() {
           </p>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="relative">
               <label
                 htmlFor="keyword"
@@ -130,7 +130,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-teal-700 cursor-pointer px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700/80 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+              className="rounded-lg w-1/2 sm:w-auto bg-teal-700 cursor-pointer px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-transparent hover:text-teal-700 disabled:opacity-50 hover:border-teal-700 border dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
             >
               {loading ? "Searching..." : "Search"}
             </button>
@@ -138,7 +138,7 @@ export default function Home() {
               type="button"
               onClick={() => handleReset()}
               disabled={loading}
-              className="rounded-lg border cursor-pointer border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-lg w-1/2 sm:w-auto border cursor-pointer border-teal-700 px-4 py-2 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-700 hover:text-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Reset
             </button>

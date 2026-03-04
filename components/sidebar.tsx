@@ -66,7 +66,8 @@ export default function Sidebar() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-50 rounded-lg border border-zinc-300 bg-white p-2 text-zinc-700 shadow-sm md:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        className={`fixed left-4 top-4 z-30 rounded-lg border border-zinc-300 bg-white p-2 text-zinc-700 shadow-sm transition-opacity md:hidden dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 ${open ? "opacity-0 pointer-events-none" : "opacity-100"
+          }`}
         aria-label="Open menu"
       >
         <svg
@@ -83,7 +84,6 @@ export default function Sidebar() {
           />
         </svg>
       </button>
-
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -92,9 +92,30 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-teal-700 transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${open ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col bg-teal-700 transition-transform duration-200 ease-in-out dark:border-zinc-800 dark:bg-zinc-900 ${open ? "translate-x-0" : "-translate-x-full"
           } md:translate-x-0`}
       >
+        <div className="flex justify-end p-0 md:hidden absolute right-1 top-1">
+          <button
+            onClick={() => setOpen(false)}
+            className="text-zinc-800 hover:text-gray-300 transition-colors"
+            aria-label="Close menu"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
         <div className="bg-zinc-50 flex items-center justify-center py-4">
           <strong className="flex items-center justify-center w-52">
             <Link href='#' className="flex items-center gap-3 justify-center">
