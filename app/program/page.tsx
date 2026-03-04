@@ -109,7 +109,7 @@ function SectionAccordion({
       <button
         type="button"
         onClick={handleToggle}
-        className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-zinc-900 transition-colors hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300"
+        className="flex w-full items-center justify-between gap-3 p-3 text-left text-lg font-semibold cursor-pointer text-zinc-900 transition-colors hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-zinc-300"
       >
         {link.label}
         <svg
@@ -147,7 +147,7 @@ function SectionAccordion({
           )}
           {subpage.html && (
             <div
-              className="prose prose-sm prose-zinc max-w-none break-words dark:prose-invert"
+              className="prose prose-sm prose-zinc max-w-none break-words dark:prose-invert [&>div]:p-5"
               dangerouslySetInnerHTML={{ __html: subpage.html }}
             />
           )}
@@ -169,7 +169,7 @@ function ProgramContent() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          className="mb-6 inline-flex items-center gap-1.5 cursor-pointer text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
         >
           <svg
             className="h-4 w-4"
@@ -203,7 +203,7 @@ function ProgramContent() {
         )}
 
         {detail && (
-          <div>
+          <div className="mx-auto max-w-4xl">
             <h1 className="mb-3 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {detail.title}
             </h1>
@@ -241,10 +241,10 @@ function ProgramContent() {
 
                 if (isDescLinkList && descLinks.length > 0) {
                   return (
-                    <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                    <div className="mt-6 rounded-lg border border-zinc-200 bg-neutral-100/80 dark:border-zinc-800 dark:bg-zinc-900">
                       {strippedText && (
                         <div
-                          className="prose prose-sm prose-zinc mb-3 max-w-none dark:prose-invert"
+                          className="prose prose-sm prose-zinc mb-3 max-w-none dark:prose-invert [&>div]:!p-5"
                           dangerouslySetInnerHTML={{ __html: stripInternalLinks(detail.descriptionHtml) }}
                         />
                       )}
@@ -281,9 +281,9 @@ function ProgramContent() {
                     return (
                       <div
                         key={i}
-                        className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
+                        className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
                       >
-                        <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                        <h2 className="mb-3 pt-5 px-3 pb-0 text-base font-semibold text-zinc-900 dark:text-zinc-100">
                           {section.heading}
                         </h2>
                         <div>
