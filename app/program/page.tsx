@@ -265,7 +265,7 @@ function ProgramContent() {
 
                 return (
                   <div
-                    className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-white p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
+                    className="prose prose-sm prose-zinc mt-6 max-w-none rounded-lg border border-zinc-200 bg-gray-200/50 p-5 dark:prose-invert dark:border-zinc-800 dark:bg-zinc-900"
                     dangerouslySetInnerHTML={{
                       __html: stripInternalLinks(detail.descriptionHtml),
                     }}
@@ -283,7 +283,7 @@ function ProgramContent() {
                     return (
                       <div
                         key={i}
-                        className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                        className="rounded-lg border border-zinc-200 bg-gray-200/50 dark:border-zinc-800 dark:bg-zinc-900"
                       >
                         <h2 className="mb-3 pt-5 px-3 pb-0 text-base font-semibold text-zinc-900 dark:text-zinc-100">
                           {section.heading}
