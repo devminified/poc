@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Search Configuration",
+  title: "POC",
   description: "Configure search parameters",
 };
 
